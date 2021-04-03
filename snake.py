@@ -72,20 +72,20 @@ class snake():
             # List of snake locations
             self.locs.append([position[0] - loc, position[1]])
     
-    def move(self, direction):
+    def move(self):
         '''
         Move the snake by one unit in a given direction
         '''
         if timing:
             move_start_time = time.time()
-        if not self.check_valid_move(direction):
+        if not self.check_valid_move(self.direction):
             # If requested move is invalid, ignore it
             if timing:
                 print(f"TIMING: move (invalid return) {time.time() - move_start_time}")
             return
-        print(f'New Direction = {direction}')
+        print(f'New Direction = {self.direction}')
         print(f'old locs = {self.locs}')
-        self.locs.insert(0, list(map(add, self.locs[0], list(direction))))
+        self.locs.insert(0, list(map(add, self.locs[0], list(self.direction))))
         print(f'New locs = {self.locs}')
         if len(self.locs) > self.length:
             self.locs.pop() #remove last element of list
@@ -341,12 +341,11 @@ if __name__ == '__main__':
 
         # Get any control signal:
         new_dir = get_new_dir_p1() # player 1
-        current_dir = new_dir
-        my_snake.move(current_dir)
-
-
         # Send the snake in the new direction
         my_snake.new_direction(new_dir[0], new_dir[1])
+        my_snake.move()
+
+
 
         #check if snake still alive
         if not my_snake.alive:
@@ -354,7 +353,7 @@ if __name__ == '__main__':
         
         #draw this on canvas
         bool_canvas = my_snake.to_canvas()
-        canvas = colourmod(bool_canvas, (255,255,255))
+        canvas = colourmod(bool_canvas, (100,100,100))
 
         # convert the canvas into something that can be written
         lin = array2lin(canvas)
