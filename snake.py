@@ -50,7 +50,7 @@ GPIO.add_event_detect(27, GPIO.FALLING, callback=p1r, bouncetime=300)
 # Define some pixels to write to.
 pixels = neopixel.NeoPixel(board.D18, 256, auto_write=False)
 
-
+treats = []
 
 
 
@@ -58,6 +58,7 @@ class snake():
     '''
     Class to hold salient information about a snake
     '''
+    global treats
     def __init__(self, length, position, colour, player_ix):
         self.length = length
         self.player_ix = player_ix
@@ -83,11 +84,20 @@ class snake():
             if timing:
                 print(f"TIMING: move (invalid return) {time.time() - move_start_time}")
             return
-        print(f'New Direction = {self.direction}')
-        print(f'old locs = {self.locs}')
         self.locs.insert(0, list(map(add, self.locs[0], list(self.direction))))
-        print(f'New locs = {self.locs}')
-        if len(self.locs) > self.length:
+        # check for treats
+        for treat in treats:
+            if (self.locs[0][0] == treat.loc[0]) and (self.locs[0][1] == treat.loc[1]):
+                if treat.current_type == 'longer':
+                    self.length += 1
+                elif treat.current_type == 'shorter':
+                    self.length -= 1
+                elif treat.current_type == 'reverse':
+                    self.direction = self.direction * -1
+                    self.locs.reverse() # reverse the locs list
+                del treat
+                    
+        while len(self.locs) > self.length:
             self.locs.pop() #remove last element of list
 
         # check we haven't left the playable area
@@ -105,14 +115,14 @@ class snake():
             global p1l_pressed, p1r_pressed
             p1l_pressed = 0
             p1r_pressed = 0
-        print(f'Direction = {self.direction}, left = {left}, right = {right}')
+        #print(f'Direction = {self.direction}, left = {left}, right = {right}')
         if left and right:
             # can't move all directions at once
-            print('Cannot move all directions at once')
+            #print('Cannot move all directions at once')
             return
         if not (left | right):
             # nothing to do
-            print('Continuing in a straight line')
+            #print('Continuing in a straight line')
             return
         if self.direction == (1,0):
             if left:
@@ -198,17 +208,18 @@ class snake():
 
 class treat():
     types = ['longer', 'shorter', 'reverse']
-    def __init__():
+    def __init__(self):
         self.seed = random.seed(a=None)
         self.new()
         return
 
-    def new():
+    def new(self):
         # select a type
         self.current_type = random.choice(self.types)
         self.get_colour()
+        self.loc = (random.randrange(0,31), random.randrange(0,8))
 
-    def get_colour():
+    def get_colour(self):
         # select a colour
         if self.current_type == 'longer':
             self.colour = (255,0,0)
@@ -298,11 +309,18 @@ def colourmod(array, colour):
     return output_array
 
 
+def overlay_treat(canvas, treat):
+    #print(f'Treat.loc = {treat.loc}, treat.colour = {treat.colour}')
+    canvas[treat.loc[0]][treat.loc[1]] = treat.colour
+    #print(canvas[treat.loc[0]][treat.loc[1]] )
+    return canvas
+
+
 def write_to_pixels(array, pixels_object):
     '''
     It would be great if we could do this without the loop.
     '''
-    # TODO: remove the loop requirement
+    # TODO: remove the loop requirement with some clever binary tinkering
     if timing:
         write_to_pixels_start_time = time.time()
     count = 0
@@ -324,19 +342,30 @@ def get_new_dir_p1():
 def new_snake():
     return snake(4, (8, 4), (255,255,255), 1)
 
+def new_treat():
+    return treat()
 
-
-if __name__ == '__main__':
+def run_snake():
     my_snake = new_snake()
     current_dir = (1,0)
     iter_count = 1 # use this to add random treats
+    global treats
     while(1):
         mainloop_start_time = time.time()
 
+        # if there are no treats left, always create a new one
+        if len(treats) == 0:
+            treats.append(treat())
+            
+        # if there are more then 3 treats, remove the oldest
+        if len(treats) > 3:
+            del treats[0]
+            treats.pop(0)
+
         # Evaluate any treats
         if not iter_count%30:
-            # change treats every 30 seconds
-            treat = treat.new()
+            # update treats every 30 frames
+            treats.append(new_treat())
             iter_count = 1
 
         # Get any control signal:
@@ -349,11 +378,15 @@ if __name__ == '__main__':
 
         #check if snake still alive
         if not my_snake.alive:
-            break #TODO: something better for when a snake dies
+            break
         
         #draw this on canvas
         bool_canvas = my_snake.to_canvas()
         canvas = colourmod(bool_canvas, (100,100,100))
+
+        # Overlay the treats
+        for this_treat in treats:
+            canvas = overlay_treat(canvas, this_treat)
 
         # convert the canvas into something that can be written
         lin = array2lin(canvas)
@@ -365,3 +398,26 @@ if __name__ == '__main__':
         while ((time.time() - mainloop_start_time) < 0.25):
             None
 
+
+if __name__ == '__main__':
+    while(True):
+        run_snake()
+        print('Game over')
+        pixels.fill((255,0,0))
+        pixels.show()
+        time.sleep(0.5)
+        pixels.fill((0,0,0))
+        pixels.show()
+        time.sleep(0.5)
+        pixels.fill((255,0,0))
+        pixels.show()
+        time.sleep(0.5)
+        pixels.fill((0,0,0))
+        pixels.show()
+        time.sleep(0.5)
+        pixels.fill((255,0,0))
+        pixels.show()
+        time.sleep(0.5)
+        pixels.fill((0,0,0))
+        pixels.show()
+        time.sleep(0.5)
