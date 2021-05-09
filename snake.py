@@ -67,6 +67,7 @@ class snake():
         self.locs = []
         self.alive = True
         self.direction = (1,0) # start in positive x direction
+        self.end_vector = (1,0) # so reverse works properly, has to start with a valid value
         self.left = 0
         self.right = 0
         for loc in range(0,length):
@@ -85,7 +86,11 @@ class snake():
                 print(f"TIMING: move (invalid return) {time.time() - move_start_time}")
             return
         self.locs.insert(0, list(map(add, self.locs[0], list(self.direction))))
+        print(f'Locs = {self.locs}')
+        self.end_vector = (self.locs[-2][0] - self.locs[-1][0], self.locs[-2][1] -self.locs[-1][1])
+        #self.end_vector = self.locs[-1] - self.locs[-2]
         # check for treats
+
         for treat in treats:
             if (self.locs[0][0] == treat.loc[0]) and (self.locs[0][1] == treat.loc[1]):
                 if treat.current_type == 'longer':
@@ -93,9 +98,10 @@ class snake():
                 elif treat.current_type == 'shorter':
                     self.length -= 1
                 elif treat.current_type == 'reverse':
-                    self.direction = self.direction * -1
+                    self.direction = (self.end_vector[0]*(0-1), self.end_vector[1]*(0-1))
                     self.locs.reverse() # reverse the locs list
-                del treat
+                treats.remove(treat) # we've used it
+                treats.append(new_treat()) # make a new one somewhere
                     
         while len(self.locs) > self.length:
             self.locs.pop() #remove last element of list
@@ -207,7 +213,7 @@ class snake():
 
 
 class treat():
-    types = ['longer', 'shorter', 'reverse']
+    types = ['reverse', 'shorter', 'longer', 'longer', 'longer', 'longer', 'longer', 'longer']
     def __init__(self):
         self.seed = random.seed(a=None)
         self.new()
@@ -351,6 +357,7 @@ def run_snake():
     iter_count = 1 # use this to add random treats
     global treats
     while(1):
+        iter_count += 1
         mainloop_start_time = time.time()
 
         # if there are no treats left, always create a new one
